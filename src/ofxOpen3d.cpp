@@ -60,20 +60,42 @@ void ofxOpen3d::downsampleMesh(const ofMesh& _original, ofMesh& _downsampled, fl
     
 }
 
-glm::mat4 ofxOpen3d::computeIcp(const PclPointCloud& source,  const PclPointCloud& target, float max_distance, double relative_fitness, double relative_rmse, size_t num_iterations){
+
+glm::mat4 ofxOpen3d::computeIcp(const PclPointCloud& source,  const PclPointCloud& target, float max_distance, double relative_fitness, double relative_rmse, size_t num_iterations, ICP_Type type){
     
-    auto result = open3d::pipelines::registration::RegistrationGeneralizedICP(
-            *source,
-            *target,
-            max_distance,
-            Eigen::Matrix4d::Identity(),
-            open3d::pipelines::registration::TransformationEstimationForGeneralizedICP(),
-            open3d::pipelines::registration::ICPConvergenceCriteria(relative_fitness, relative_rmse, num_iterations));
+    using namespace open3d::pipelines::registration;
+    RegistrationResult result;
+    if(type == ICP_POINT_TO_POINT){
+        result = RegistrationICP(
+                                 *source,
+                                 *target,
+                                 max_distance,
+                                 Eigen::Matrix4d::Identity(),
+                                 TransformationEstimationPointToPoint(false),
+                                 ICPConvergenceCriteria(relative_fitness, relative_rmse, num_iterations));
+    }else if(type == ICP_POINT_TO_PLANE){
+        result = RegistrationICP(
+                                 *source,
+                                 *target,
+                                 max_distance,
+                                 Eigen::Matrix4d::Identity(),
+                                 TransformationEstimationPointToPlane(),
+                                 ICPConvergenceCriteria(relative_fitness, relative_rmse, num_iterations));
+    }else{
+        result = RegistrationGeneralizedICP(
+                                            *source,
+                                            *target,
+                                            max_distance,
+                                            Eigen::Matrix4d::Identity(),
+                                            TransformationEstimationForGeneralizedICP(),
+                                            ICPConvergenceCriteria(relative_fitness, relative_rmse, num_iterations));
+    }
+    
     
     
     return toGlm(result.transformation_);
-     
+    
 }
 glm::mat4 ofxOpen3d::computeIcp(const ofxOpen3d::IcpParams& param){
-    return ofxOpen3d::computeIcp( param.source, param.target, param.max_distance, param.relative_fitness, param.relative_rmse, param.num_iterations);
+    return ofxOpen3d::computeIcp( param.source, param.target, param.max_distance, param.relative_fitness, param.relative_rmse, param.num_iterations, param.type);
 }
